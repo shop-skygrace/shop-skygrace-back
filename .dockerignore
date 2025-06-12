@@ -1,0 +1,16 @@
+node_modules
+.medusa
+.env*
+.DS_Store
+.vscode
+.git
+.idea
+*.log
+*.md
+jest.config.js
+integration-tests
+instrumentation.ts
+.dockerignore
+Dockerfile
+docker-compose.yml
+.gitignore
