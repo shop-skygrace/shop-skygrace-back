@@ -1,0 +1,54 @@
+services:
+  back:
+    image: $DOCKER_IMAGE
+    networks:
+      - share
+      - db
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == make-appointment
+    environment:
+      MEDUSA_WORKER_MODE: shared
+      ADMIN_DISABLED: "false"
+      STORE_CORS: http://localhost:8000,https://shop-skygrace.stayqr.ru
+      ADMIN_CORS: http://localhost:5173,http://localhost:9000,https://shop-skygrace-api.stayqr.ru
+      AUTH_CORS: http://localhost:5173,http://localhost:9000,http://localhost:8000,https://shop-skygrace-api.stayqr.ru
+      DATABASE_URL: $DATABASE_URL
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: $JWT_SECRET
+      COOKIE_SECRET: $COOKIE_SECRET
+      MEDUSA_ADMIN_ONBOARDING_TYPE: nextjs
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.shop-skygrace-api.rule: 'Host("shop-skygrace-api.stayqr.ru")'
+      traefik.http.routers.shop-skygrace-api.entrypoints: websecure
+      traefik.http.routers.shop-skygrace-api.tls.certresolver: letsencrypt
+      traefik.http.services.shop-skygrace-api.loadbalancer.server.port: 9000
+
+  redis:
+    image: redis
+    networks:
+      - default
+    volumes:
+      - redis:/data
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == make-appointment
+
+volumes:
+  redis:
+
+networks:
+  default:
+  share:
+    external: true
+    name: $SHARE_NETWORK_NAME
+  db:
+    external: true
+    name: $POSTGRES_NETWORK

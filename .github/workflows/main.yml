@@ -1,0 +1,50 @@
+name: Deploy shop-skygrace-back
+run-name: ${{ github.actor }} - ${{ github.event.head_commit.message }} - 🚀
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  Build:
+    runs-on: shop
+    env:
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Docker login
+        run: echo $DOCKER_PASSWORD | docker login ghcr.io -u $DOCKER_USER --password-stdin
+      - name: Docker build
+        run: docker build --progress=plain
+          --tag ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF_NAME .
+      - name: Docker push
+        run: docker push ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF_NAME
+
+  Deploy:
+    runs-on: shop
+    needs: Build
+    env:
+      SHARE_NETWORK_NAME: ${{ secrets.SHARE_NETWORK_NAME }}
+      POSTGRES_NETWORK: ${{ secrets.POSTGRES_NETWORK }}
+      #
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      #
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Docker login
+        run: echo $DOCKER_PASSWORD | docker login ghcr.io -u $DOCKER_USER --password-stdin
+      - name: Docker pull
+        run: docker pull ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF_NAME
+      - name: Get image ID
+        run:
+          echo "DOCKER_IMAGE=$(docker inspect --format='{{index .RepoDigests 0}}'
+          ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF_NAME)" >> $GITHUB_ENV
+      - name: Deploy
+        run: docker stack deploy -c stacks/main_stack.yml shop-skygrace        
